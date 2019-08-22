@@ -1,4 +1,9 @@
-﻿namespace NU.Calculator
+﻿using Calculator.Rules;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NU.Calculator
 {
     public interface IStringCalculator
     {
@@ -9,26 +14,37 @@
     {
         private const int DefaultValue = 0;
 
-        public StringCalculator()
-        {
+        private readonly IDelimiterRule _delimiterRule;
+        private readonly IGreaterNumberRule _greaterNumberRule;
+        private readonly INegativeNumberRule _negativeNumberRule;
 
+        public StringCalculator(IDelimiterRule delimiterRule, 
+            IGreaterNumberRule greaterNumberRule, 
+            INegativeNumberRule negativeNumberRule)
+        {
+            if(delimiterRule == null) throw new ArgumentNullException(nameof(delimiterRule));
+            if(greaterNumberRule == null) throw new ArgumentNullException(nameof(greaterNumberRule));
+            if(negativeNumberRule == null) throw new ArgumentNullException(nameof(negativeNumberRule));
+
+            _delimiterRule = delimiterRule;
+            _greaterNumberRule = greaterNumberRule;
+            _negativeNumberRule = negativeNumberRule;
         }
 
         public int Add(string input)
         {
-            var result = 0;
-
             if (string.IsNullOrWhiteSpace(input))
             {
                 return DefaultValue;
             }
 
-            foreach (string number in input.Split(','))
-            {
-                result = result + int.Parse(number);
-            }
+            var numbers = _delimiterRule.SplitStringToNumbers(input);
 
-            return result;
+            var numbersWithoutIgnored = numbers.Where(s => !_greaterNumberRule.isIgnored(s)).ToList();
+
+            numbersWithoutIgnored.ForEach(s => _negativeNumberRule.validate(s));
+
+            return numbersWithoutIgnored.Sum();
         }
     }
 }
